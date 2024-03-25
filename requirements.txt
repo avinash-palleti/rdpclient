@@ -1,4 +1,4 @@
 flask
-rdpy
+rdpy3
 opencv-python
 twisted
