@@ -1,4 +1,3 @@
 flask
 rdpy
-rdpy.client
 opencv-python
