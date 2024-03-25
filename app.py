@@ -1,5 +1,5 @@
 from flask import Flask, render_template, request
-from rdpy.protocol.rdp import rdp
+from rdpy3.protocol.rdp import rdp
 from twisted.internet import reactor
 class MyRDPFactory(rdp.ClientFactory):
     def __init__(self, server_ip, password):
