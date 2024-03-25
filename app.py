@@ -1,40 +1,27 @@
 from flask import Flask, render_template, request
-from rdpy.client import RDPClient
-import cv2
-import numpy as np
-
+from rdpy.protocol.rdp import rdp
+from twisted.internet import reactor
+class MyRDPFactory(rdp.ClientFactory):
+    def __init__(self, server_ip, password):
+        self.server_ip = server_ip
+        self.password = password
+    def clientConnectionLost(self, connector, reason):
+        reactor.stop()
+    def clientConnectionFailed(self, connector, reason):
+        reactor.stop()
+    def buildProtocol(self, addr):
+        return rdp.RDPClientProtocol(self)
 app = Flask(__name__)
-
-@app.route('/')
+@app.route('/', methods=['GET', 'POST'])
 def index():
+    if request.method == 'POST':
+        server_ip = request.form.get('server_ip')
+        password = request.form.get('password')
+        if server_ip and password:
+            reactor.connectTCP(server_ip, 3389, MyRDPFactory(server_ip, password))
+            reactor.run()
+        else:
+            return "Please enter both IP and password", 400
     return render_template('index.html')
-
-@app.route('/connect', methods=['POST'])
-def connect():
-    server_address = request.form['server_address']
-    username = request.form['username']
-    password = request.form['password']
-
-    client = RDPClient(server_address)
-    client.login(username, password)
-    client.share_resources()
-    client.create_virtual_channel("mychannel")
-
-    try:
-        client.connect()
-        while True:
-            screen_update = client.get_screen_update()
-            if screen_update:
-                # Convert screen update to OpenCV image
-                image = screen_update.to_cv2_image()
-                # Convert image to JPEG format for web display
-                _, buffer = cv2.imencode('.jpg', image)
-                jpg_image = buffer.tobytes()
-                # Send image to client
-                yield (b'--frame\r\n'
-                       b'Content-Type: image/jpeg\r\n\r\n' + jpg_image + b'\r\n\r\n')
-    finally:
-        client.disconnect()
-
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=8080)
+    app.run(debug=True)
